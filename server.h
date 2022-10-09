@@ -19,7 +19,7 @@ private:
     QByteArray data;
     void sendToClient(QString, qintptr, qintptr);
     quint16 blockSize;
-    void writeDataToSocket(QTcpSocket*, bool, QString);
+    void writeDataToSocket(QTcpSocket*, bool, qintptr, QString);
 
 public slots:
     void incomingConnection(qintptr);

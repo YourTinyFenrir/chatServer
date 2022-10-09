@@ -18,8 +18,11 @@ void Server::sendToClient(QString msg, qintptr senderDesc, qintptr recipientDesc
 
     if (recipientDesc != NULL) { // Передача сообщения
 
-        QTcpSocket* addressSocket = sockets.find(recipientDesc).value();
-        writeDataToSocket(addressSocket, false, msg);
+        QTcpSocket* addressSocket = sockets.find(recipientDesc).value(); // Отправка сообщения адресату
+        writeDataToSocket(addressSocket, false, senderDesc, msg);
+
+        QTcpSocket* senderSocket = sockets.find(senderDesc).value(); // Отправка сообщения отправителю (для сохранения истории сообщений)
+        writeDataToSocket(senderSocket, false, senderDesc, msg);
 
     }
     else { // Пополнение списка адресатов (для всех клиентов)
@@ -31,13 +34,13 @@ void Server::sendToClient(QString msg, qintptr senderDesc, qintptr recipientDesc
                 foreach (QTcpSocket* tempSck, sockets.values()) {
 
                     if (senderDesc != tempSck->socketDescriptor()) { // Клиент сам себе не может отправлять сообщения
-                        writeDataToSocket(sck, true, QString::number(tempSck->socketDescriptor()));
+                        writeDataToSocket(sck, true, senderDesc, QString::number(tempSck->socketDescriptor()));
                     }
 
                 }
             }
             else { // Для существующих клиентов только добавить нового
-                writeDataToSocket(sck, true, msg);
+                writeDataToSocket(sck, true, senderDesc, msg);
             }
         }
 
@@ -45,13 +48,13 @@ void Server::sendToClient(QString msg, qintptr senderDesc, qintptr recipientDesc
 
 }
 
-void Server::writeDataToSocket(QTcpSocket* sck, bool typeInfo, QString msg) // typeInfo = false - отправка сообщения, true - передача списка адресатов
-{
+void Server::writeDataToSocket(QTcpSocket* sck, bool typeInfo, qintptr address, QString msg) // typeInfo = false - отправка сообщения, true - передача списка адресатов
+{                                                                                            // address - дескриптор сокета, от которого получено сообщение
     data.clear();
     QDataStream output(&data, QIODevice::WriteOnly);
     output.setVersion(QDataStream::Qt_6_3);
 
-    output << quint16(0) << quint64(0) << typeInfo << msg; // Выделить место под размер сообщения в начале блока данных
+    output << quint16(0) << address << typeInfo << msg; // Выделить место под размер сообщения в начале блока данных
     output.device()->seek(0); // Переместиться в начало блока данных
     output << quint16(data.size() - sizeof(quint16)); // Записать размер сообщения
 
